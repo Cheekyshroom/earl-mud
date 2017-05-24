@@ -1,8 +1,17 @@
 -module(main).
 -export([start/0]).
--include("room.hrl").
+-include("room_interface.hrl").
+
+main_loop(Game_Data) ->
+    A = receive
+            Result -> Result
+        end,
+    io:format("A is ~p~n", [A]).
 
 start() ->
-    R = #room{name = "A small room",
-              description = "A really small room"},
-    io:format("~p~n", [R#room.name]).
+    R = spawn(room, new, [#room_data{name = "A small room",
+                                description = "A really small room"
+                               }]),
+    R ! {self(), enter, player1},
+    R ! {self(), get, players},
+    main_loop(10).
