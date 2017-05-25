@@ -46,10 +46,9 @@ worldEventLoop(World) ->
              {lostplayer, PlayerName} ->
                io:format("Player '~s' has departed.~n", [PlayerName]),
                getPlayerByName(World, PlayerName) ! {self(), logout};
-             {travel, PlayerName, Direction, Callback} ->
+             {player_command, PlayerName, Command, Callback} ->
                Player = getPlayerByName(World, PlayerName),
-               Player ! {Callback, travel, Direction};
-             {take, PlayerName, Item, Callback} -> ok;
+               Player ! {Callback, client_command, Command};
              {getRoomDescription, PlayerName, Callback} ->
                Player = getPlayerByName(World, PlayerName),
                Player ! {self(), describe_room},

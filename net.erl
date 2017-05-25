@@ -53,7 +53,7 @@ parseCommand(Sock, Username, World, Line) ->
 	case strings:lcTokens(Line, " ") of
 		["go", Direction] ->
 			io:format("'~s' is traveling '~s'~n", [Username, Direction]),
-			World ! {travel, Username, Direction, self()},
+			World ! {player_command, Username, {travel, Direction}, self()},
 			receive
 				{ok, NewLocation} ->
 					gen_tcp:send(Sock, ["You are now at '", NewLocation, "'\n"]);
@@ -61,8 +61,8 @@ parseCommand(Sock, Username, World, Line) ->
 					gen_tcp:send(Sock, ["There is no exit to the '", Direction, "'\n"])
 			end;
 		["take", Item] ->
-			io:format("'~s' is picking up '~s'~n", Username, Item),
-			World ! {take, Username, Item, self()};
+			io:format("'~s' is picking up '~s'~n", [Username, Item]),
+			World ! {player_command, Username, {take, Item}, self()};
 		["look"] ->
 			World ! {getRoomDescription, Username, self()},
 			receive

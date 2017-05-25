@@ -32,7 +32,7 @@ new(Player) ->
                      Client -> Client! {message, OtherName, Msg}
                    end
                end;
-             {Pid, travel, Direction} ->
+             {Pid, client_command, {travel, Direction}} ->
                Room = Player#player_data.room,
                Room ! {self(), room_in_direction, Direction},
                receive
@@ -46,7 +46,9 @@ new(Player) ->
                                      room = NextRoom
                                     }};
                  error -> ok
-               end
+               end;
+             {_, client_command, {take, Item}} ->
+               io:format("~p taking item: ~p~n", [self(), Item])
            end,
   case Result of
     {update_player, NewPlayer} -> new(NewPlayer);
