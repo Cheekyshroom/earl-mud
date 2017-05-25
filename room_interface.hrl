@@ -3,6 +3,6 @@
 -record(room_data, {
             name,
             description,
-            exits = [],
+            exits = #{},
             players = []
         }).
