@@ -7,20 +7,20 @@
 
 new(Room) ->
   Result = receive
-             {Pid, get} -> Pid ! Room, ok;
+             {Pid, get} -> Pid ! Room;
              {Pid, room_in_direction, Direction} ->
-               Pid ! maps:find(Direction, Room#room_data.exits), ok;
+               Pid ! maps:find(Direction, Room#room_data.exits);
              {_, enter, Player} ->
-               Room#room_data{players = [Player | Room#room_data.players]};
+               {update_room, Room#room_data{players = [Player | Room#room_data.players]}};
              {_, exit, Player} ->
                NewPlayers = lists:filter(fun(P) -> P /= Player end, Room#room_data.players),
-               Room#room_data{players = NewPlayers};
+               {update_room, Room#room_data{players = NewPlayers}};
              {_, set_exits, Exits} ->
-               Room#room_data{exits = Exits}
+               {update_room, Room#room_data{exits = Exits}}
            end,
   case Result of
-    ok -> new(Room);
-    NewRoom -> new(NewRoom)
+    {update_room, NewRoom} -> new(NewRoom);
+    _ -> new(Room)
   end.
 
 %%% Takes a filename and returns a map of [existing PID] => room_data

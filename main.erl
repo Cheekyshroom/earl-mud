@@ -41,27 +41,24 @@ addPlayer(World, Name, Client) ->
 
 worldEventLoop(World) ->
   Result = receive
-             {newplayer, PlayerName, Callback} -> addPlayer(World, PlayerName, Callback);
+             {newplayer, PlayerName, Callback} ->
+               {update_world, addPlayer(World, PlayerName, Callback)};
              {lostplayer, PlayerName} ->
                io:format("Player '~s' has departed.~n", [PlayerName]),
-               getPlayerByName(World, PlayerName) ! {self(), logout},
-               ok;
+               getPlayerByName(World, PlayerName) ! {self(), logout};
              {travel, PlayerName, Direction, Callback} ->
                Player = getPlayerByName(World, PlayerName),
-               Player ! {Callback, travel, Direction},
-               ok;
+               Player ! {Callback, travel, Direction};
              {take, PlayerName, Item, Callback} -> ok;
              {getRoomDescription, PlayerName, Callback} ->
                Player = getPlayerByName(World, PlayerName),
                Player ! {self(), describe_room},
                {room_description, Description} = receive A -> A end,
-               Callback ! {ok, Description},
-               ok
+               Callback ! {ok, Description}
            end,
   case Result of
-    ok -> worldEventLoop(World);
-    {ok, _} -> worldEventLoop(World);
-    NewWorld -> worldEventLoop(NewWorld)
+    {update_world, NewWorld} -> worldEventLoop(NewWorld);
+    _ -> worldEventLoop(World)
   end.
 
 start() ->
@@ -69,6 +66,4 @@ start() ->
   io:format("World initialized.~n"),
   spawn(net, listenForClients, [self()]),
 	io:format("Listening for clients -- server ready.~n"),
-  worldEventLoop(#world_data{
-                    rooms = Rooms
-                   }).
+  worldEventLoop(#world_data{rooms = Rooms}).

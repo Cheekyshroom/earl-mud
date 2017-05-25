@@ -12,26 +12,25 @@ new(Player) ->
                       RoomData#room_data.description
                       ++ "\nWith exits leading: "
                       ++ string:join(maps:keys(RoomData#room_data.exits), ", ")
-                     },
-               ok;
+                     };
              {Pid, get, name} ->
                Pid! {name, Player#player_data.name};
              {_, logout} ->
-               Player#player_data{
-                 client = false
-                };
+               {update_player, Player#player_data{
+                                 client = false
+                                }};
              {_, login, ClientPid} ->
-               Player#player_data{
-                 client = ClientPid
-                };
+               {update_player, Player#player_data{
+                                 client = ClientPid
+                                }};
              {Pid, message, Msg} ->
                Pid ! {self(), get, name},
-               OtherName = receive
-                        {name, Name} -> Name
-                      end,
-               case Player#player_data.client of
-                 false -> ok;
-                 Client -> Client! {message, OtherName, Msg}
+               receive
+                 {name, OtherName} ->
+                   case Player#player_data.client of
+                     false -> ok;
+                     Client -> Client! {message, OtherName, Msg}
+                   end
                end;
              {Pid, travel, Direction} ->
                Room = Player#player_data.room,
@@ -43,13 +42,13 @@ new(Player) ->
                    NextRoom ! {self(), get},
                    RoomData = receive A -> A end,
                    Pid ! {ok, RoomData#room_data.name},
-                   Player#player_data{
-                     room = NextRoom
-                    };
+                   {update_player, Player#player_data{
+                                     room = NextRoom
+                                    }};
                  error -> ok
                end
            end,
   case Result of
-    ok -> new(Player);
-    NewPlayer -> new(NewPlayer)
+    {update_player, NewPlayer} -> new(NewPlayer);
+    _ -> new(Player)
   end.
