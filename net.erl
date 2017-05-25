@@ -42,7 +42,7 @@ clientLoop(Sock, Username, World) ->
 			World ! {lostplayer, Username};
 		{tcp, Sock, Msg} ->
 			parseCommand(Sock, Username, World, strings:rstrip(Msg)),
-			clientLoop(Sock, Username, World)
+			clientLoop(Sock, Username, World);
 		{message, From, Msg} ->
 			gen_tcp:send(Sock, ["Message from '", From, "': \"", Msg, "\"\n"]);
 		{announce, Msg} ->
