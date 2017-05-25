@@ -1,6 +1,6 @@
 -module(main).
 -export([start/0]).
--include("room.hrl").
+-include("room_interface.hrl").
 
 worldEventLoop() ->
 	receive
@@ -11,10 +11,12 @@ worldEventLoop() ->
 	worldEventLoop().
 
 start() ->
-    R = #room{name = "A small room",
-              description = "A really small room"},
-    io:format("~s~n", [R#room.name]),
-	io:format("World initialized.~n"),
-	spawn(net, listenForClients, [self()]),
+  R = spawn(room, new, [#room_data{name = "A small room",
+                                description = "A really small room"
+                               }]),
+  R ! {self(), enter, player1},
+  R ! {self(), get, players},
+  io:format("World initialized.~n"),
+  spawn(net, listenForClients, [self()]),
 	io:format("Listening for clients -- server ready.~n"),
-	worldEventLoop().
+  worldEventLoop().
