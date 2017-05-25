@@ -32,7 +32,7 @@ load_map(Filename) ->
   NewPidToActor = maps:fold(fun(OldPid, Actor, Out) ->
                                 OldRoom = maps:get(OldPid, Rooms),
                                 OldExits = OldRoom#room_data.exits,
-                                NewExits = lists:map(fun(OldExitPid) ->
+                                NewExits = maps:map(fun(_, OldExitPid) ->
                                                          maps:get(OldExitPid, OldPidToActor)
                                                      end,
                                                      OldExits),
@@ -51,7 +51,7 @@ save_map(Filename, Rooms) ->
   %% Make all the pids in the exits and Room object be strings instead of Pids
   ToString = fun(Datum) -> io_lib:format("\"~p\"", [Datum]) end,
   StringifiedRooms = maps:fold(fun(OldPid, RoomData, Out) ->
-                                   NewExits = lists:map(ToString, RoomData#room_data.exits),
+                                   NewExits = maps:map(fun(_, Pid) -> ToString(Pid) end, RoomData#room_data.exits),
                                    maps:put(ToString(OldPid),
                                             RoomData#room_data{
                                               exits = NewExits
