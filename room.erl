@@ -7,12 +7,13 @@
 
 new(Room) ->
   Result = receive
-             {Pid, get} ->
-               Pid ! {room_data, Room};
+             {Pid, get} -> Pid ! Room, ok;
+             {Pid, room_in_direction, Direction} ->
+               Pid ! maps:find(Direction, Room#room_data.exits), ok;
              {_, enter, Player} ->
                Room#room_data{players = [Player | Room#room_data.players]};
              {_, exit, Player} ->
-               NewPlayers = lists:filter(fun(P) -> P /= Player end),
+               NewPlayers = lists:filter(fun(P) -> P /= Player end, Room#room_data.players),
                Room#room_data{players = NewPlayers};
              {_, set_exits, Exits} ->
                Room#room_data{exits = Exits}
@@ -39,7 +40,7 @@ load_map(Filename) ->
                                 Actor ! {self(), set_exits, NewExits},
                                 Actor ! {self(), get},
                                 Data = receive
-                                         {room_data, Result} -> Result
+                                         Result -> Result
                                        end,
                                 maps:put(Actor, Data, Out)
                             end,

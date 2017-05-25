@@ -5,20 +5,35 @@
 
 -record(world_data,{rooms, players = #{}}).
 
+getRoomByName(World, Name) ->
+  Rooms = World#world_data.rooms,
+  maps:fold(fun(RoomId, RoomData, Out) ->
+                if Name == RoomData#room_data.name ->
+                    RoomId;
+                   true ->
+                    Out
+                end
+            end,
+            false, Rooms).
+
+getPlayerByName(World, Name) ->
+  maps:get(Name, World#world_data.players).
+
 addPlayer(World, Name, Client) ->
   AlreadyCreated = maps:is_key(Name, World#world_data.players),
   case AlreadyCreated of
     true ->
       io:format("Player '~s' has come back.~n", [Name]),
-      Player = maps:get(Name, World#world_data.players),
-      Player ! {login, Client};
+      Player = getPlayerByName(World, Name),
+      Player ! {self(), login, Client},
+      World;
     false ->
       io:format("Player '~s' has arrived.~n", [Name]),
-      Pid = spawn(player, new, #player_data{
-                                  name = Name,
-                                  client = Client,
-                                  room = maps:get("Starting Room", World#world_data.rooms)
-                                 }),
+      Pid = spawn(player, new, [#player_data{
+                                   name = Name,
+                                   client = Client,
+                                   room = getRoomByName(World, "Starting Room")
+                                  }]),
       World#world_data{
         players = maps:put(Name, Pid, World#world_data.players)
        }
@@ -26,15 +41,26 @@ addPlayer(World, Name, Client) ->
 
 worldEventLoop(World) ->
   Result = receive
-             {newplayer, PlayerName, Callback} -> io:format("fooo~n"), addPlayer(World, PlayerName, Callback);
-             {lostplayer, PlayerName} -> io:format("Player '~s' has departed.~n", [PlayerName]);
-             {travel, PlayerName, Direction, Callback} -> ok;
+             {newplayer, PlayerName, Callback} -> addPlayer(World, PlayerName, Callback);
+             {lostplayer, PlayerName} ->
+               io:format("Player '~s' has departed.~n", [PlayerName]),
+               getPlayerByName(World, PlayerName) ! {self(), logout},
+               ok;
+             {travel, PlayerName, Direction, Callback} ->
+               Player = getPlayerByName(World, PlayerName),
+               Player ! {Callback, travel, Direction},
+               ok;
              {take, PlayerName, Item, Callback} -> ok;
              {getRoomDescription, PlayerName, Callback} ->
-               Callback ! {ok, "You are in a dark and lonely room."}
+               Player = getPlayerByName(World, PlayerName),
+               Player ! {self(), describe_room},
+               {room_description, Description} = receive A -> A end,
+               Callback ! {ok, Description},
+               ok
            end,
   case Result of
     ok -> worldEventLoop(World);
+    {ok, _} -> worldEventLoop(World);
     NewWorld -> worldEventLoop(NewWorld)
   end.
 
