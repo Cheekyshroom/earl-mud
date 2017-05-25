@@ -4,9 +4,10 @@
 
 worldEventLoop() ->
 	receive
-    % {badarg,[{io,format,[<0.48.0>,"Player '~s' has arrived.~n",<<109,105,108,111,10>>],[]}
 		{newplayer, PlayerName} -> io:format("Player '~s' has arrived.~n", [PlayerName]);
-		{lostplayer, PlayerName} -> io:format("Player '~s' has departed.~n", [PlayerName])
+		{lostplayer, PlayerName} -> io:format("Player '~s' has departed.~n", [PlayerName]);
+		{travel, PlayerName, Direction, Callback} -> ok;
+		{take, PlayerName, Item, Callback} -> ok
 	end,
 	worldEventLoop().
 
