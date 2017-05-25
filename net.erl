@@ -2,7 +2,7 @@
 -export([listenForClients/1]).
 -include("configuration.hrl").
 
--define(TCP_OPTIONS, [binary, {packet, 0}, {active, false}, {reuseaddr, true}]).
+-define(TCP_OPTIONS, [binary, {active, false}, {reuseaddr, true}]).
 
 listenForClients(World) ->
 	{ok, Socket} = gen_tcp:listen(?SERVER_PORT, ?TCP_OPTIONS),
@@ -10,7 +10,8 @@ listenForClients(World) ->
 
 accept(ServerSock, World) ->
 	{ok, ClientSock} = gen_tcp:accept(ServerSock),
-	spawn(fun() -> clientLogin(ClientSock, World) end),
+	NewClientPid = spawn(fun() -> clientLogin(ClientSock, World) end),
+	gen_tcp:controlling_process(ClientSock, NewClientPid),
 	accept(ServerSock, World).
 
 clientLogin(Sock, World) ->
@@ -27,12 +28,29 @@ clientLogin(Sock, World) ->
 
 clientLoop(Sock, Username, World) ->
 	gen_tcp:send(Sock, ["Instructions, ", Username, "? "]),
-	case gen_tcp:recv(Sock, 0) of
-		{ok, Command} ->
-			gen_tcp:send(Sock, ["I heard: '", strings:rstrip(Command), "'\n"]),
+	inet:setopts(Sock, [{active, once}]),
+	receive
+		{tcp, Sock, <<"quit", _/binary>>} -> 
+			gen_tcp:close(Sock),
+			World ! {lostplayer, Username};
+		{tcp_closed, Sock} ->
+			World ! {lostplayer, Username};
+		{tcp_error, Sock, Reason} ->
+			io:format("Error on socket ~p reason: ~p~n", [Sock, Reason]),
+			World ! {lostplayer, Username};
+		{tcp, Sock, <<"help", _/binary>>} -> 
+			gen_tcp:send(Sock, "The Lord helps those who help themselves.\n"),
 			clientLoop(Sock, Username, World);
-		{error, closed} ->
-			World ! {lostplayer, Username},
-			ok
+		{tcp, Sock, Msg} ->
+			gen_tcp:send(Sock, ["I heard: '", strings:rstrip(Msg), "'\n"]),
+			clientLoop(Sock, Username, World)
 	end.
+	%case gen_tcp:recv(Sock, 0) of
+		%{ok, Command} ->
+			%gen_tcp:send(Sock, ["I heard: '", strings:rstrip(Command), "'\n"]),
+			%clientLoop(Sock, Username, World);
+		%{error, closed} ->
+			%World ! {lostplayer, Username},
+			%ok
+	%end.
 	
