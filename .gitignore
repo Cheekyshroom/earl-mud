@@ -1,2 +1,4 @@
 # Ignore compiled files
 *.beam
+# Ignore crash files
+*.dump
