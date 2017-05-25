@@ -42,15 +42,25 @@ clientLoop(Sock, Username, World) ->
 			gen_tcp:send(Sock, "The Lord helps those who help themselves.\n"),
 			clientLoop(Sock, Username, World);
 		{tcp, Sock, Msg} ->
-			gen_tcp:send(Sock, ["I heard: '", strings:rstrip(Msg), "'\n"]),
+			parseCommand(Sock, Username, World, strings:rstrip(Msg)),
 			clientLoop(Sock, Username, World)
 	end.
-	%case gen_tcp:recv(Sock, 0) of
-		%{ok, Command} ->
-			%gen_tcp:send(Sock, ["I heard: '", strings:rstrip(Command), "'\n"]),
-			%clientLoop(Sock, Username, World);
-		%{error, closed} ->
-			%World ! {lostplayer, Username},
-			%ok
-	%end.
-	
+
+parseCommand(Sock, Username, World, Line) ->
+	case string:tokens(Line, " ") of
+		["go", Direction] ->
+			io:format("'~s' is traveling '~s'~n", [Username, Direction]),
+			World ! {travel, Username, Direction, self()},
+			receive
+				{ok, NewLocation} ->
+					gen_tcp:send(Sock, ["You are now at '", NewLocation, "'\n"]);
+				{no_exit} ->
+					gen_tcp:send(Sock, ["There is no exit to the '", Direction, "'\n"])
+			end;
+		["take", Item] ->
+			io:format("'~s' is picking up '~s'~n", Username, Item),
+			World ! {take, Username, Item, self()};
+		_Else ->
+			gen_tcp:send(Sock, "I didn't understand that.\n"),
+			io:format("Stuck parsing: '~p'~n", [string:tokens(Line, " ")])
+	end.
