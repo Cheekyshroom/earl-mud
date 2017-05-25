@@ -11,13 +11,7 @@ worldEventLoop() ->
 	worldEventLoop().
 
 start() ->
-  {Worked, [R|_]} = room:load_map("map.dat"),
-  case Worked of
-    ok -> ok;
-    _ -> throw("Map load failed")
-  end,
-  %% R ! {self(), enter, player1},
-  %% R ! {self(), get, players},
+  {Rooms} = room:load_map("map.dat"),
   io:format("World initialized.~n"),
   spawn(net, listenForClients, [self()]),
 	io:format("Listening for clients -- server ready.~n"),
