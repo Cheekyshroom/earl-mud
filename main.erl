@@ -2,24 +2,19 @@
 -export([start/0]).
 -include("room_interface.hrl").
 
-main_loop(Game_Data) ->
-    A = receive
-            Result -> Result
-        end,
-    io:format("A is ~p~n", [A]).
+worldEventLoop() ->
+	receive
+		% {badarg,[{io,format,[<0.48.0>,"Player '~s' has arrived.~n",<<109,105,108,111,10>>],[]}
+		{newplayer, PlayerName} -> io:format("Player '~s' has arrived.~n", [PlayerName]);
+		{lostplayer, PlayerName} -> io:format("Player '~s' has departed.~n", [PlayerName])
+	end,
+	worldEventLoop().
 
 start() ->
-    R = #room_data{
-           description = "Hey man",
-           name = "Joe"
-          },
-    room:save_map("map.dat", R),
-    {Worked, [R2|_]} = room:load_map("map.dat"),
-    case Worked of
-        ok ->
-            io:format("room 1 is ~p~nroom 2 is ~p~n",
-                      [R, R2]);
-        Error ->
-            io:format("Got ~p reading from save.~n",
-                      [Error])
-    end.
+  R = room:load_map("map.dat"),
+  R ! {self(), enter, player1},
+  R ! {self(), get, players},
+  io:format("World initialized.~n"),
+  spawn(net, listenForClients, [self()]),
+	io:format("Listening for clients -- server ready.~n"),
+  worldEventLoop().
