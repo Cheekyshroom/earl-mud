@@ -21,7 +21,7 @@ clientLogin(Sock, World) ->
 	case gen_tcp:recv(Sock, 0) of
 		{ok, RawUsername} ->
 			Username = string:to_lower(re:replace(RawUsername, "\\s+", "", [global,{return,list}])),
-			World ! {newplayer, Username},
+			World ! {newplayer, Username, self()},
 			gen_tcp:send(Sock, ?BANNER),
 			clientLoop(Sock, Username, World);
 		{error, closed} ->
@@ -43,6 +43,10 @@ clientLoop(Sock, Username, World) ->
 		{tcp, Sock, Msg} ->
 			parseCommand(Sock, Username, World, strings:rstrip(Msg)),
 			clientLoop(Sock, Username, World)
+		{message, From, Msg} ->
+			gen_tcp:send(Sock, ["Message from '", From, "': \"", Msg, "\"\n"]);
+		{announce, Msg} ->
+			gen_tcp:send(Sock, ["Server announcement: \"", Msg, "\"\n"])
 	end.
 
 parseCommand(Sock, Username, World, Line) ->
