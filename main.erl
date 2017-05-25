@@ -7,7 +7,8 @@ worldEventLoop() ->
 		{newplayer, PlayerName} -> io:format("Player '~s' has arrived.~n", [PlayerName]);
 		{lostplayer, PlayerName} -> io:format("Player '~s' has departed.~n", [PlayerName]);
 		{travel, PlayerName, Direction, Callback} -> ok;
-		{take, PlayerName, Item, Callback} -> ok
+		{take, PlayerName, Item, Callback} -> ok;
+		{getRoomDescription, PlayerName, Callback} -> Callback ! {ok, "You are in a dark and lonely room."}
 	end,
 	worldEventLoop().
 
