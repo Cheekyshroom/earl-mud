@@ -11,7 +11,8 @@ listenForClients(World) ->
 accept(ServerSock, World) ->
 	{ok, ClientSock} = gen_tcp:accept(ServerSock),
 	NewClientPid = spawn(fun() -> clientLogin(ClientSock, World) end),
-	gen_tcp:controlling_process(ClientSock, NewClientPid),
+	% Make sure *child* receives events when socket is put in active mode
+	gen_tcp:controlling_process(ClientSock, NewClientPid), 
 	accept(ServerSock, World).
 
 clientLogin(Sock, World) ->
@@ -60,7 +61,25 @@ parseCommand(Sock, Username, World, Line) ->
 		["take", Item] ->
 			io:format("'~s' is picking up '~s'~n", Username, Item),
 			World ! {take, Username, Item, self()};
+		["look"] ->
+			World ! {getRoomDescription, Username, self()},
+			receive
+				{ok, Description} ->
+					gen_tcp:send(Sock, [Description, "\n"]);
+				{error, Description} ->
+					gen_tcp:send(Sock, "Something has gone wrong -- cannot get room description\n")
+			end;
 		_Else ->
-			gen_tcp:send(Sock, "I didn't understand that.\n"),
+			gen_tcp:send(Sock, [getRandomDidNotUnderstand(), "\n"]),
 			io:format("Stuck parsing: '~p'~n", [string:tokens(Line, " ")])
 	end.
+
+getRandomDidNotUnderstand() ->
+	Responses = [
+		"I didn't understand that.",
+		"What's that?",
+		"Reply hazy, try again later.",
+		"Speak up, I can't hear you."
+		],
+	Index = rand:uniform(length(Responses)),
+	lists:nth(Index, Responses).
