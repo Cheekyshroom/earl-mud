@@ -3,7 +3,7 @@
 -include("room_interface.hrl").
 -include("player_interface.hrl").
 
--record(world_data,{rooms, players}).
+-record(world_data,{rooms, players = []}).
 
 addPlayer(World, Name, Client) ->
   AlreadyCreated = maps:is_key(Name, World#world_data.players),
@@ -44,6 +44,5 @@ start() ->
   spawn(net, listenForClients, [self()]),
 	io:format("Listening for clients -- server ready.~n"),
   worldEventLoop(#world_data{
-                    rooms = Rooms,
-                    players = []
+                    rooms = Rooms
                    }).
