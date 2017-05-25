@@ -1,4 +1,6 @@
 # Ignore compiled files
 *.beam
-# Ignore crash files
-*.dump
+# Ignore vim swap files
+.*.swp
+# Ignore erlang crash files
+erl_crash.dump
