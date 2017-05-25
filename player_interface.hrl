@@ -2,7 +2,7 @@
 
 -record(player_data, {
           name,
-          room,
+          room = false,
           client = false,
           inventory = []
          }).

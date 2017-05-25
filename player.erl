@@ -1,26 +1,27 @@
 -module(player).
 -export([new/1]).
+-include("player_interface.hrl").
 
 new(Player) ->
   Result = receive
              {Pid, get, name} ->
                Pid! {name, Player#player_data.name};
-             {Pid, logout} ->
+             {_, logout} ->
                Player#player_data{
                  client = false
                 };
-             {Pid, login, ClientPid} ->
+             {_, login, ClientPid} ->
                Player#player_data{
                  client = ClientPid
                 };
              {Pid, message, Msg} ->
                Pid ! {self(), get, name},
-               Name = receive
+               OtherName = receive
                         {name, Name} -> Name
                       end,
                case Player#player_data.client of
                  false -> ok;
-                 Client -> Client! {message, Name, Msg}
+                 Client -> Client! {message, OtherName, Msg}
                end
            end,
   case Result of
