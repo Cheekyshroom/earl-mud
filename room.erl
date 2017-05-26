@@ -7,13 +7,20 @@
 
 new(Room) ->
   Result = receive
+             {Pid, broadcast, Message} ->
+               io:format("Broadcasting ~p to ~p~n", [Message, Room#room_data.players]),
+               lists:foreach(fun(Player) ->
+                                 Player ! {Pid, output, Message}
+                             end, Room#room_data.players);
              {Pid, get} -> Pid ! Room;
              {Pid, room_in_direction, Direction} ->
                Pid ! maps:find(Direction, Room#room_data.exits);
              {_, enter, Player} ->
-               {update_room, Room#room_data{players = [Player | Room#room_data.players]}};
+               io:format("~p has entered ~p~n", [Player, self()]),
+               NewPlayers = [Player | [P || P <- Room#room_data.players, P /= Player]],
+               {update_room, Room#room_data{players = NewPlayers}};
              {_, exit, Player} ->
-               NewPlayers = lists:filter(fun(P) -> P /= Player end, Room#room_data.players),
+               NewPlayers = [P || P <- Room#room_data.players, P /= Player],
                {update_room, Room#room_data{players = NewPlayers}};
              {_, set_exits, Exits} ->
                {update_room, Room#room_data{exits = Exits}}

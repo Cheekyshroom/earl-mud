@@ -31,22 +31,28 @@ clientLogin(Sock, World) ->
 clientLoop(Sock, Username, World) ->
 	gen_tcp:send(Sock, ["Instructions, ", Username, "? "]),
 	inet:setopts(Sock, [{active, once}]),
-	receive
-		{tcp, Sock, <<"quit", _/binary>>} -> 
-			gen_tcp:close(Sock),
-			World ! {lostplayer, Username};
-		{tcp_closed, Sock} ->
-			World ! {lostplayer, Username};
-		{tcp_error, Sock, Reason} ->
-			io:format("Error on socket ~p reason: ~p~n", [Sock, Reason]),
-			World ! {lostplayer, Username};
-		{tcp, Sock, Msg} ->
-			parseCommand(Sock, Username, World, strings:rstrip(Msg)),
-			clientLoop(Sock, Username, World);
-		{message, From, Msg} ->
-			gen_tcp:send(Sock, ["Message from '", From, "': \"", Msg, "\"\n"]);
-		{announce, Msg} ->
-			gen_tcp:send(Sock, ["Server announcement: \"", Msg, "\"\n"])
+	Result = receive
+             {tcp, Sock, <<"quit", _/binary>>} ->
+               gen_tcp:close(Sock),
+               World ! {lostplayer, Username};
+             {tcp_closed, Sock} ->
+               World ! {lostplayer, Username};
+             {tcp_error, Sock, Reason} ->
+               io:format("Error on socket ~p reason: ~p~n", [Sock, Reason]),
+               World ! {lostplayer, Username};
+             {tcp, Sock, Msg} ->
+               parseCommand(Sock, Username, World, strings:rstrip(Msg));
+             {message, From, Msg} ->
+               gen_tcp:send(Sock, ["Message from '", From, "': \"", Msg, "\"\n"]);
+             {output, Msg} ->
+               gen_tcp:send(Sock, [Msg, "\n"]);
+             {announce, Msg} ->
+               gen_tcp:send(Sock, ["Server announcement: \"", Msg, "\"\n"])
+           end,
+  case Result of
+    quit -> done;
+    {lostplayer, _} -> done;
+    _ -> clientLoop(Sock, Username, World)
 	end.
 
 parseCommand(Sock, Username, World, Line) ->
@@ -64,13 +70,15 @@ parseCommand(Sock, Username, World, Line) ->
 			io:format("'~s' is picking up '~s'~n", [Username, Item]),
 			World ! {player_command, Username, {take, Item}, self()};
 		["look"] ->
-			World ! {getRoomDescription, Username, self()},
+			World ! {player_command, Username, look, self()},
 			receive
 				{ok, Description} ->
 					gen_tcp:send(Sock, [Description, "\n"]);
-				{error, Description} ->
+				{error, _} ->
 					gen_tcp:send(Sock, "Something has gone wrong -- cannot get room description\n")
 			end;
+    ["say" | Message] ->
+      World ! {player_command, Username, {say, string:join(Message, " ")}, self()};
 		["help"] ->
 			gen_tcp:send(Sock, [?INSTRUCTIONS, "\n"]);
 		["who", "am", "i"] ->

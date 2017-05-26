@@ -34,6 +34,7 @@ addPlayer(World, Name, Client) ->
                                    client = Client,
                                    room = getRoomByName(World, "Starting Room")
                                   }]),
+      Pid ! {self(), login, Client},
       World#world_data{
         players = maps:put(Name, Pid, World#world_data.players)
        }
@@ -48,12 +49,7 @@ worldEventLoop(World) ->
                getPlayerByName(World, PlayerName) ! {self(), logout};
              {player_command, PlayerName, Command, Callback} ->
                Player = getPlayerByName(World, PlayerName),
-               Player ! {Callback, client_command, Command};
-             {getRoomDescription, PlayerName, Callback} ->
-               Player = getPlayerByName(World, PlayerName),
-               Player ! {self(), describe_room},
-               {room_description, Description} = receive A -> A end,
-               Callback ! {ok, Description}
+               Player ! {Callback, client_command, Command}
            end,
   case Result of
     {update_world, NewWorld} -> worldEventLoop(NewWorld);
