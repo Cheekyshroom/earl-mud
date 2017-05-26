@@ -26,14 +26,10 @@ new(Player) ->
              {Pid, get, name} ->
                Pid ! {name, Player#player_data.name};
              {_, logout} ->
-               {update_player, Player#player_data{
-                                 client = false
-                                }};
+               {update_player, Player#player_data{client = false}};
              {_, login, ClientPid} ->
                Player#player_data.room ! {self(), enter, self()},
-               {update_player, Player#player_data{
-                                 client = ClientPid
-                                }};
+               {update_player, Player#player_data{client = ClientPid}};
              {_, output, Msg} ->
                outputToClient(Player, Msg);
              {Pid, client_command, look} ->
