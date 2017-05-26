@@ -7,8 +7,14 @@
 
 new(Room) ->
   Result = receive
+             {Pid, broadcast_others, Message} ->
+               lists:foreach(fun(Player) ->
+                                 if Player /= Pid ->
+                                     Player ! {Pid, output, Message};
+                                    true -> ok
+                                 end
+                             end, Room#room_data.players);
              {Pid, broadcast, Message} ->
-               io:format("Broadcasting ~p to ~p~n", [Message, Room#room_data.players]),
                lists:foreach(fun(Player) ->
                                  Player ! {Pid, output, Message}
                              end, Room#room_data.players);

@@ -70,13 +70,7 @@ parseCommand(Sock, Username, World, Line) ->
 			io:format("'~s' is picking up '~s'~n", [Username, Item]),
 			World ! {player_command, Username, {take, Item}, self()};
 		["look"] ->
-			World ! {player_command, Username, look, self()},
-			receive
-				{ok, Description} ->
-					gen_tcp:send(Sock, [Description, "\n"]);
-				{error, _} ->
-					gen_tcp:send(Sock, "Something has gone wrong -- cannot get room description\n")
-			end;
+			World ! {player_command, Username, look, self()};
     ["say" | Message] ->
       World ! {player_command, Username, {say, string:join(Message, " ")}, self()};
 		["help"] ->
