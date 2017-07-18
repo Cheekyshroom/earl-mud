@@ -23,12 +23,15 @@ clientLogin(Sock, World) ->
 			Username = string:to_lower(re:replace(RawUsername, "\\s+", "", [global,{return,list}])),
 			World ! {newplayer, Username, self()},
 			gen_tcp:send(Sock, ?BANNER),
-			clientLoop(Sock, Username, World);
+			clientLoop(#client{sock = Sock, username = Username, world = World});
 		{error, closed} ->
 			ok
 	end.	
 
-clientLoop(Sock, Username, World) ->
+clientLoop(Data) ->
+  Sock = Data#client.sock,
+  Username = Data#client.username,
+  World = Data#client.world,
 	gen_tcp:send(Sock, ["Instructions, ", Username, "? "]),
 	inet:setopts(Sock, [{active, once}]),
 	Result = receive
@@ -47,12 +50,15 @@ clientLoop(Sock, Username, World) ->
              {output, Msg} ->
                gen_tcp:send(Sock, [Msg, "\n"]);
              {announce, Msg} ->
-               gen_tcp:send(Sock, ["Server announcement: \"", Msg, "\"\n"])
+               gen_tcp:send(Sock, ["Server announcement: \"", Msg, "\"\n"]);
+             {connect_to_user, User} ->
+               {update, Data#client{user = User}}
            end,
   case Result of
     quit -> done;
     {lostplayer, _} -> done;
-    _ -> clientLoop(Sock, Username, World)
+    {update, NewData} -> clientLoop(NewData);
+    _ -> clientLoop(Data)
 	end.
 
 parseCommand(Sock, Username, World, Line) ->

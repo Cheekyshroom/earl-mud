@@ -32,7 +32,7 @@ new(Player) ->
                {update_player, Player#player_data{client = ClientPid}};
              {_, output, Msg} ->
                outputToClient(Player, Msg);
-             {Pid, client_command, look} ->
+             {_, client_command, look} ->
                Description = describeRoom(Player),
                outputToClient(Player, ["\n", Description, "\n"]);
              {_, client_command, {say, Message}} ->

@@ -35,6 +35,7 @@ addPlayer(World, Name, Client) ->
                                    room = getRoomByName(World, "Starting Room")
                                   }]),
       Pid ! {self(), login, Client},
+      Client ! {connect_to_user, Pid},
       World#world_data{
         players = maps:put(Name, Pid, World#world_data.players)
        }
